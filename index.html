@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>בונה גאנט</title>
+    <!-- Firebase compat SDK (v9) -->
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Arial, sans-serif;
+            background: #eef0f4;
+            color: #333;
+            min-height: 100vh;
+        }
+
+        /* ===== LOGIN SCREEN ===== */
+        #login-screen {
+            position: fixed; inset: 0;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 1000;
+        }
+        .login-card {
+            background: white; border-radius: 18px;
+            padding: 44px 40px; width: 380px; max-width: 94vw;
+            text-align: center; box-shadow: 0 24px 64px rgba(0,0,0,0.45);
+        }
+        .login-logo  { font-size: 3rem; margin-bottom: 10px; }
+        .login-title { font-size: 1.85rem; font-weight: 800; color: #2c3e50; margin-bottom: 4px; }
+        .login-sub   { color: #aaa; font-size: 0.88rem; margin-bottom: 30px; }
+        .login-field { text-align: right; margin-bottom: 16px; }
+        .login-field label { display: block; font-size: 0.8rem; font-weight: 700; color: #666; margin-bottom: 6px; }
+        .login-field input {
+            width: 100%; padding: 12px 14px; border: 2px solid #e0e4e8;
+            border-radius: 8px; font-size: 1rem; font-family: inherit; transition: border-color 0.18s;
+        }
+        .login-field input:focus { outline: none; border-color: #3498db; }
+        .login-error { color: #e74c3c; font-size: 0.83rem; margin-bottom: 12px; }
+        .btn-login {
+            width: 100%; padding: 13px; background: #27ae60; color: white;
+            border: none; border-radius: 8px; font-size: 1.05rem; font-weight: 700;
+            font-family: inherit; cursor: pointer; margin-top: 6px; transition: all 0.16s;
+        }
+        .btn-login:hover { background: #219150; transform: translateY(-1px); }
+
+        /* ===== PAGE HEADER ===== */
+        .page-header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white; padding: 18px 30px;
+            display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+        }
+        .page-header h1 { font-size: 1.7rem; font-weight: 800; letter-spacing: 1px; }
+        .header-center  { text-align: center; }
+        .header-center p { opacity: 0.55; font-size: 0.85rem; margin-top: 2px; }
+        .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+        .student-info-bar { font-size: 0.85rem; opacity: 0.85; font-weight: 600; }
+        .save-status {
+            font-size: 0.74rem; padding: 3px 10px; border-radius: 10px;
+            transition: all 0.3s;
+        }
+        .ss-idle    { color: rgba(255,255,255,0.35); }
+        .ss-pending { background: rgba(255,255,255,0.12); color: rgba(255,255,255,0.75); }
+        .ss-saved   { background: rgba(39,174,96,0.3); color: #90ee90; }
+        .ss-error   { background: rgba(231,76,60,0.35); color: #ffaaaa; }
+
+        /* ===== TEACHER HEADER BUTTON ===== */
+        .header-teacher-link {
+            font-size: 0.75rem; color: rgba(255,255,255,0.4); text-decoration: none;
+            padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.2);
+        }
+        .header-teacher-link:hover { color: rgba(255,255,255,0.7); }
+
+        /* ===== TEACHER VIEW ===== */
+        .teacher-class-group { margin-bottom: 18px; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.07); }
+        .teacher-class-header {
+            font-weight: 800; font-size: 0.88rem; color: #2c3e50;
+            padding: 9px 14px; background: #f1f3f5; border-bottom: 2px solid #dee2e6;
+        }
+        .teacher-student-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 11px 14px; border-bottom: 1px solid #f5f5f5;
+            cursor: pointer; transition: background 0.12s; background: white;
+        }
+        .teacher-student-row:hover { background: #f0f7ff; }
+        .teacher-student-row:last-child { border-bottom: none; }
+        .ts-name    { font-weight: 700; min-width: 130px; }
+        .ts-project { color: #666; flex: 1; font-size: 0.84rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .ts-time    { color: #aaa; font-size: 0.77rem; white-space: nowrap; }
+
+        /* ===== LAYOUT ===== */
+        .container { max-width: 1300px; margin: 0 auto; padding: 24px 20px; }
+
+        /* ===== CARD ===== */
+        .card {
+            background: white; border-radius: 12px; padding: 22px 24px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07); margin-bottom: 20px;
+            border: 1px solid rgba(0,0,0,0.06);
+        }
+        .section-title {
+            font-size: 1rem; font-weight: 700; color: #2c3e50; margin-bottom: 16px;
+            display: flex; align-items: center; gap: 8px;
+        }
+
+        /* ===== PROJECT NAME ===== */
+        .project-name-wrapper { margin-bottom: 20px; padding-bottom: 18px; border-bottom: 2px dashed #e8ecf0; }
+        .project-name-label { font-size: 0.78rem; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; display: block; }
+        .project-name-input {
+            width: 100%; font-size: 1.5rem; font-weight: 800; color: #2c3e50;
+            border: none; border-bottom: 2px solid #e0e4e8; border-radius: 0;
+            padding: 6px 4px; font-family: inherit; background: transparent; transition: border-color 0.2s;
+        }
+        .project-name-input::placeholder { color: #ccc; font-weight: 400; font-style: italic; }
+        .project-name-input:focus { outline: none; border-bottom-color: #3498db; }
+
+        /* ===== BUTTONS ===== */
+        .btn {
+            padding: 9px 18px; border: none; border-radius: 7px; cursor: pointer;
+            font-size: 0.88rem; font-family: inherit; font-weight: 600; transition: all 0.16s;
+            display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn:hover   { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 4px 10px rgba(0,0,0,0.14); }
+        .btn:active  { transform: translateY(0); box-shadow: none; }
+        .btn-primary  { background: #3498db; color: white; }
+        .btn-delete   { background: rgba(231,76,60,0.1); color: #c0392b; border: 1px solid rgba(231,76,60,0.25); padding: 5px 11px; font-size: 0.8rem; }
+        .btn-secondary { background: #ecf0f1; color: #555; }
+        .btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+
+        /* ===== MAIN TASK CARD ===== */
+        .main-task-card { border-radius: 10px; margin-bottom: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.09); }
+        .main-task-header { padding: 11px 16px; display: flex; align-items: center; gap: 10px; }
+        .task-num { font-size: 0.76rem; font-weight: 700; background: rgba(255,255,255,0.22); color: white; padding: 2px 8px; border-radius: 4px; white-space: nowrap; }
+        .main-task-name-input {
+            flex: 1; background: rgba(255,255,255,0.22); border: 1px solid rgba(255,255,255,0.35);
+            border-radius: 7px; color: white; font-size: 1rem; font-weight: 700; padding: 6px 12px; font-family: inherit;
+        }
+        .main-task-name-input::placeholder { color: rgba(255,255,255,0.5); }
+        .main-task-name-input:focus { outline: none; background: rgba(255,255,255,0.32); border-color: rgba(255,255,255,0.6); }
+        .main-task-body { background: white; }
+
+        /* ===== SUBTASK ROW ===== */
+        .subtask-row {
+            display: flex; align-items: center; gap: 10px; padding: 8px 16px;
+            border-bottom: 1px solid #f2f2f2; transition: background 0.12s; flex-wrap: wrap;
+        }
+        .subtask-row:hover { background: #fafafa; }
+        .color-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+        .sub-name-input { flex: 1; min-width: 120px; border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; font-size: 0.87rem; font-family: inherit; }
+        .sub-name-input:focus { outline: none; border-color: #3498db; box-shadow: 0 0 0 2px rgba(52,152,219,0.12); }
+        .field-group { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+        .field-label { font-size: 0.76rem; color: #777; font-weight: 600; white-space: nowrap; }
+        .duration-input { width: 56px; border: 1px solid #ddd; border-radius: 6px; padding: 6px 8px; font-size: 0.87rem; text-align: center; font-family: inherit; }
+        .duration-input:focus { outline: none; border-color: #3498db; }
+        .dep-select { border: 1px solid #ddd; border-radius: 6px; padding: 6px 10px; font-size: 0.81rem; font-family: inherit; max-width: 210px; color: #444; background: white; }
+        .dep-select:focus { outline: none; border-color: #3498db; }
+        .add-sub-row { padding: 9px 16px; background: #f9f9f9; border-top: 1px solid #f0f0f0; }
+        .empty-input-state { padding: 24px; text-align: center; color: #bbb; font-size: 0.88rem; }
+        .milestone-toggle {
+            display: flex; align-items: center; gap: 5px; cursor: pointer; user-select: none;
+            padding: 4px 8px; border-radius: 5px; border: 1px solid #ddd; background: white;
+            font-size: 0.78rem; font-weight: 600; color: #666; transition: background 0.12s; white-space: nowrap;
+        }
+        .milestone-toggle:hover { background: #f5f5f5; }
+        .milestone-toggle input { margin: 0; accent-color: #8e44ad; cursor: pointer; }
+
+        /* ===== GANTT OUTPUT ===== */
+        .gantt-output { background: white; border-radius: 14px; padding: 28px 30px; box-shadow: 0 4px 20px rgba(0,0,0,0.09); }
+        .gantt-empty { padding: 50px 20px; text-align: center; color: #ccc; }
+        .gantt-empty .icon { font-size: 3rem; margin-bottom: 12px; }
+        .gantt-empty p { font-size: 1rem; }
+
+        /* Duration banner */
+        .duration-banner { text-align: center; padding: 20px 20px 16px; margin-bottom: 24px; background: linear-gradient(135deg, #f8f9fa, #ffffff); border-radius: 12px; border: 2px solid #e9ecef; }
+        .banner-project-name { font-size: 1.5rem; font-weight: 800; color: #2c3e50; margin-bottom: 8px; min-height: 1.8rem; }
+        .banner-project-name.placeholder { color: #ddd; font-weight: 400; font-style: italic; font-size: 1rem; }
+        .duration-number { font-size: 5rem; font-weight: 900; color: #2c3e50; line-height: 1; letter-spacing: -2px; }
+        .duration-unit  { font-size: 1.3rem; color: #555; font-weight: 700; margin-top: 4px; }
+        .duration-meta  { font-size: 0.83rem; color: #aaa; margin-top: 6px; }
+
+        /* Legend */
+        .legend { display: flex; flex-wrap: wrap; gap: 10px 22px; padding: 12px 18px; background: #f8f9fa; border-radius: 9px; margin-bottom: 20px; }
+        .legend-item  { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; font-weight: 600; }
+        .legend-swatch { width: 22px; height: 13px; border-radius: 4px; }
+        .error-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 11px 16px; color: #856404; margin-bottom: 14px; font-weight: 600; }
+
+        /* ===== GANTT TABLE ===== */
+        .gantt-wrapper { overflow-x: auto; }
+        .gantt-table { border-collapse: separate; border-spacing: 0; table-layout: fixed; }
+        .gantt-table thead th { background: #f1f3f5; border-bottom: 2px solid #dee2e6; padding: 6px 3px; font-size: 0.73rem; text-align: center; font-weight: 700; color: #666; user-select: none; }
+        .gantt-table thead th.name-header { text-align: left; padding-left: 14px; width: 220px; min-width: 220px; position: sticky; left: 0; z-index: 3; background: #f1f3f5; }
+        .gantt-table tbody td { border-bottom: 1px solid #f0f0f0; height: 44px; padding: 0; vertical-align: middle; }
+        .gantt-table tbody td.name-cell { width: 220px; min-width: 220px; padding: 0 10px 0 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; position: sticky; left: 0; background: white; z-index: 1; }
+        .gantt-table tbody td.name-cell.group-header { font-weight: 800; font-size: 0.9rem; }
+        .gantt-table tbody tr.group-row td { height: 34px; }
+        .gantt-table tbody tr:hover td { background-color: #f7f9fc !important; }
+        .gantt-bar { margin: 9px 3px; height: 26px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-size: 0.7rem; font-weight: 700; color: white; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; padding: 0 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: default; }
+
+        /* Milestone diamond */
+        .gantt-milestone-cell { overflow: visible; padding: 0; }
+        .gantt-milestone-wrap { display: flex; align-items: center; justify-content: center; height: 44px; overflow: visible; }
+        .gantt-diamond { width: 22px; height: 22px; transform: rotate(45deg); border: 3px solid; border-radius: 3px; box-shadow: 0 2px 6px rgba(0,0,0,0.25); flex-shrink: 0; cursor: default; }
+
+        /* Read-only overlay */
+        .readonly-badge { display: inline-block; background: #f39c12; color: white; font-size: 0.72rem; font-weight: 700; padding: 2px 9px; border-radius: 10px; margin-right: 10px; }
+    </style>
+</head>
+<body>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen">
+    <div class="login-card">
+        <div class="login-logo">📊</div>
+        <h2 class="login-title">בונה גאנט</h2>
+        <p class="login-sub">כלי לתרגול בניית לוז פרויקט</p>
+        <div class="login-field">
+            <label>שם מלא</label>
+            <input type="text" id="login-name" placeholder="הכנס שמך המלא...">
+        </div>
+        <div class="login-field">
+            <label>כיתה</label>
+            <input type="text" id="login-class" placeholder='לדוגמה: י"ב 2'>
+        </div>
+        <div id="login-error" class="login-error" style="display:none;"></div>
+        <button class="btn-login" onclick="doLogin()">התחל לבנות ←</button>
+    </div>
+</div>
+
+<!-- ===== TEACHER VIEW ===== -->
+<div id="teacher-view" style="display:none;">
+    <div class="page-header">
+        <div></div>
+        <div class="header-center"><h1>📊 לוח מורה</h1><p>מעקב אחרי עבודות תלמידים — בזמן אמת</p></div>
+        <div></div>
+    </div>
+    <div class="container">
+        <div id="teacher-list-section">
+            <div class="card">
+                <div class="section-title">📚 עבודות תלמידים</div>
+                <div id="teacher-list-content"><div class="empty-input-state">טוען...</div></div>
+            </div>
+        </div>
+
+        <div id="teacher-gantt-section" style="display:none;">
+            <div class="card" style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+                <button class="btn btn-secondary" onclick="backToTeacherList()">← חזרה לרשימה</button>
+                <span class="readonly-badge">מצב צפייה</span>
+                <span id="teacher-student-label" style="font-weight:700; font-size:1rem;"></span>
+                <span id="teacher-last-saved" style="color:#aaa; font-size:0.8rem; margin-right:auto;"></span>
+            </div>
+
+            <div class="gantt-output">
+                <div id="t-gantt-empty" class="gantt-empty" style="display:none;">
+                    <div class="icon">📭</div><p>אין עדיין נתוני גאנט לתלמיד זה</p>
+                </div>
+                <div id="t-gantt-content">
+                    <div class="duration-banner">
+                        <div id="t-banner-name" class="banner-project-name placeholder">שם הפרויקט</div>
+                        <div id="t-total-days" class="duration-number">—</div>
+                        <div class="duration-unit">ימי פרויקט</div>
+                        <div id="t-meta-text" class="duration-meta"></div>
+                    </div>
+                    <div id="t-error-banner" class="error-banner" style="display:none;"></div>
+                    <div class="legend" id="t-legend"></div>
+                    <div class="gantt-wrapper" dir="ltr">
+                        <div id="teacher-gantt-chart" style="position:relative;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ===== STUDENT APP ===== -->
+<div id="app" style="display:none;">
+    <div class="page-header">
+        <a href="?teacher" class="header-teacher-link" target="_blank">לוח מורה ↗</a>
+        <div class="header-center">
+            <h1>📊 בונה גאנט</h1>
+        </div>
+        <div class="header-right">
+            <span id="student-info-bar" class="student-info-bar"></span>
+            <span id="save-status" class="save-status ss-idle"></span>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="card">
+            <div class="project-name-wrapper">
+                <span class="project-name-label">שם הפרויקט</span>
+                <input type="text" id="project-name-input" class="project-name-input"
+                       placeholder="הכנס שם פרויקט..."
+                       oninput="updateProjectName(this.value)">
+            </div>
+            <div class="section-title">📋 משימות</div>
+            <div id="main-tasks-container">
+                <div class="empty-input-state">לחץ "הוסף משימה מרכזית" כדי להתחיל</div>
+            </div>
+            <div style="margin-top: 14px;">
+                <button class="btn btn-primary" onclick="addMainTask()">＋ הוסף משימה מרכזית</button>
+            </div>
+        </div>
+
+        <div class="gantt-output">
+            <div id="gantt-empty" class="gantt-empty">
+                <div class="icon">📅</div>
+                <p>הגאנט יופיע כאן אוטומטית כשתוסיף משימות</p>
+            </div>
+            <div id="gantt-content" style="display:none;">
+                <div class="duration-banner">
+                    <div id="banner-project-name" class="banner-project-name placeholder">שם הפרויקט</div>
+                    <div class="duration-number" id="total-days">0</div>
+                    <div class="duration-unit">ימי פרויקט</div>
+                    <div class="duration-meta" id="meta-text"></div>
+                </div>
+                <div id="error-banner" class="error-banner" style="display:none;"></div>
+                <div class="legend" id="legend"></div>
+                <div class="gantt-wrapper" dir="ltr">
+                    <div id="gantt-chart" style="position:relative;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// ================================================================
+//  FIREBASE
+// ================================================================
+const firebaseConfig = {
+    apiKey:            "AIzaSyAGpAtDnVhm6Mun98Rl55CeeQHLuzy1KK4",
+    authDomain:        "gant-class.firebaseapp.com",
+    databaseURL:       "https://gant-class-default-rtdb.firebaseio.com",
+    projectId:         "gant-class",
+    storageBucket:     "gant-class.firebasestorage.app",
+    messagingSenderId: "954363660809",
+    appId:             "1:954363660809:web:a9b744ff14066012db86d8"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ================================================================
+//  PALETTE & HELPERS
+// ================================================================
+const PALETTE = [
+    { bg: '#e74c3c', light: '#fdecea' },
+    { bg: '#2980b9', light: '#ebf5fb' },
+    { bg: '#27ae60', light: '#eafaf1' },
+    { bg: '#d35400', light: '#fdf2e9' },
+    { bg: '#8e44ad', light: '#f5eef8' },
+    { bg: '#16a085', light: '#e8f8f5' },
+    { bg: '#c0392b', light: '#fdedec' },
+    { bg: '#1a5276', light: '#d6eaf8' },
+    { bg: '#6c3483', light: '#e8daef' },
+    { bg: '#145a32', light: '#d5f5e3' },
+];
+const color = idx => PALETTE[idx % PALETTE.length];
+
+function lightenColor(hex, amount) {
+    const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16);
+    const lr = Math.round(r+(255-r)*amount), lg = Math.round(g+(255-g)*amount), lb = Math.round(b+(255-b)*amount);
+    return `#${lr.toString(16).padStart(2,'0')}${lg.toString(16).padStart(2,'0')}${lb.toString(16).padStart(2,'0')}`;
+}
+function subName(id, subs) {
+    subs = subs || subTasks;
+    const s = subs.find(t => t.id === id);
+    return s ? s.name : '?';
+}
+function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = String(str ?? '');
+    return d.innerHTML;
+}
+function sanitizeKey(str) {
+    return str.trim().replace(/[.#$\[\]/]/g, '-').slice(0, 60) || 'unknown';
+}
+
+// ================================================================
+//  STATE
+// ================================================================
+let projectName  = '';
+let mainTasks    = [];
+let subTasks     = [];
+let nextMid      = 1;
+let nextSid      = 1;
+
+let studentName  = '';
+let studentClass = '';
+let isDirty      = false;
+let saveTimer    = null;
+let refreshTimer = null;
+
+// ================================================================
+//  SAVE / LOAD
+// ================================================================
+function markDirty() {
+    if (!studentName) return;
+    isDirty = true;
+    showSaveStatus('pending');
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveNow, 3000);
+}
+
+function saveNow() {
+    if (!studentName || !studentClass) return;
+    const payload = {
+        studentName, studentClass, projectName,
+        mainTasks: JSON.parse(JSON.stringify(mainTasks)),
+        subTasks:  JSON.parse(JSON.stringify(subTasks)),
+        lastSaved: Date.now()
+    };
+    db.ref(`students/${sanitizeKey(studentClass)}/${sanitizeKey(studentName)}`)
+      .set(payload)
+      .then(() => { isDirty = false; showSaveStatus('saved'); })
+      .catch(() => showSaveStatus('error'));
+}
+
+// Periodic save every 10 seconds
+setInterval(() => { if (isDirty && studentName) saveNow(); }, 10000);
+
+function showSaveStatus(s) {
+    const el = document.getElementById('save-status');
+    if (!el) return;
+    const map = { pending: ['ss-pending','● שומר...'], saved: ['ss-saved','✓ נשמר'], error: ['ss-error','⚠ שגיאת שמירה'], idle: ['ss-idle',''] };
+    const [cls, txt] = map[s] || map.idle;
+    el.className = 'save-status ' + cls;
+    el.textContent = txt;
+}
+
+// ================================================================
+//  LOGIN
+// ================================================================
+function doLogin() {
+    const name  = document.getElementById('login-name').value.trim();
+    const cls   = document.getElementById('login-class').value.trim();
+    const errEl = document.getElementById('login-error');
+    if (!name || !cls) {
+        errEl.textContent = 'אנא הכנס שם וכיתה';
+        errEl.style.display = 'block';
+        return;
+    }
+    errEl.style.display = 'none';
+    studentName  = name;
+    studentClass = cls;
+
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('student-info-bar').textContent = `${name} | ${cls}`;
+
+    // Load existing data if any
+    db.ref(`students/${sanitizeKey(cls)}/${sanitizeKey(name)}`).once('value').then(snap => {
+        const data = snap.val();
+        if (data) restoreState(data);
+        renderInput();
+        refreshGantt();
+    });
+}
+
+function restoreState(data) {
+    if (data.projectName !== undefined) {
+        projectName = data.projectName;
+        const el = document.getElementById('project-name-input');
+        if (el) el.value = projectName;
+    }
+    if (Array.isArray(data.mainTasks)) mainTasks = data.mainTasks;
+    if (Array.isArray(data.subTasks))  subTasks  = data.subTasks;
+    nextMid = Math.max(1, ...mainTasks.map(m => m.id)) + 1;
+    nextSid = Math.max(1, ...subTasks.map(s => s.id))  + 1;
+}
+
+// Keyboard shortcuts in login
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('login-name').addEventListener('keydown', e => { if (e.key === 'Enter') document.getElementById('login-class').focus(); });
+    document.getElementById('login-class').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+});
+
+// ================================================================
+//  TEACHER VIEW
+// ================================================================
+function initTeacherView() {
+    document.getElementById('teacher-view').style.display = 'block';
+    document.getElementById('login-screen').style.display = 'none';
+    // Real-time listener
+    db.ref('students').on('value', snap => renderTeacherList(snap.val() || {}));
+}
+
+function renderTeacherList(data) {
+    const content = document.getElementById('teacher-list-content');
+    const classes = Object.keys(data).sort();
+    if (!classes.length) {
+        content.innerHTML = '<div class="empty-input-state">אין עבודות שמורות עדיין</div>';
+        return;
+    }
+    content.innerHTML = classes.map(cls => {
+        const students = Object.entries(data[cls] || {}).sort(([,a],[,b]) => (a.studentName||'').localeCompare(b.studentName||''));
+        const rows = students.map(([key, sd]) => {
+            const t = sd.lastSaved ? new Date(sd.lastSaved).toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'}) : '';
+            const proj = sd.projectName ? ` — ${esc(sd.projectName)}` : '';
+            return `<div class="teacher-student-row"
+                         data-cls="${esc(cls)}" data-key="${esc(key)}"
+                         onclick="viewStudent(this.dataset.cls, this.dataset.key)">
+                      <span class="ts-name">${esc(sd.studentName || key)}</span>
+                      <span class="ts-project">${proj}</span>
+                      <span class="ts-time">${t}</span>
+                    </div>`;
+        }).join('');
+        return `<div class="teacher-class-group">
+                  <div class="teacher-class-header">כיתה ${esc(cls)}</div>
+                  ${rows}
+                </div>`;
+    }).join('');
+}
+
+function viewStudent(cls, key) {
+    db.ref(`students/${cls}/${key}`).once('value').then(snap => {
+        const data = snap.val();
+        if (!data) return;
+        document.getElementById('teacher-list-section').style.display = 'none';
+        document.getElementById('teacher-gantt-section').style.display = 'block';
+        document.getElementById('teacher-student-label').textContent = `${data.studentName || key} | ${data.studentClass || cls}`;
+        if (data.lastSaved) {
+            const d = new Date(data.lastSaved);
+            document.getElementById('teacher-last-saved').textContent =
+                `נשמר: ${d.toLocaleDateString('he-IL')} ${d.toLocaleTimeString('he-IL',{hour:'2-digit',minute:'2-digit'})}`;
+        }
+        renderTeacherGantt(data);
+    });
+}
+
+function renderTeacherGantt(data) {
+    const mains = data.mainTasks || [];
+    const subs  = data.subTasks  || [];
+    const pname = data.projectName || '';
+
+    const nameEl = document.getElementById('t-banner-name');
+    nameEl.textContent = pname || 'ללא שם פרויקט';
+    nameEl.className   = 'banner-project-name' + (pname ? '' : ' placeholder');
+
+    const hasData = mains.length > 0 && subs.length > 0;
+    document.getElementById('t-gantt-empty').style.display   = hasData ? 'none'  : 'block';
+    document.getElementById('t-gantt-content').style.display = hasData ? 'block' : 'none';
+    if (!hasData) { document.getElementById('t-total-days').textContent = '—'; return; }
+
+    const { schedule, hasCycle } = calcSchedule(subs);
+    const totalDays = Math.max(...Object.values(schedule).map(s => s.endDay), 1);
+
+    document.getElementById('t-total-days').textContent = totalDays;
+    document.getElementById('t-meta-text').textContent  = `${subs.length} משימות משנה | ${mains.length} משימות מרכזיות`;
+
+    const errEl = document.getElementById('t-error-banner');
+    errEl.style.display = hasCycle ? 'block' : 'none';
+    errEl.textContent   = '⚠️ נמצאה תלות מעגלית';
+
+    document.getElementById('t-legend').innerHTML = mains.map((mt, i) =>
+        `<div class="legend-item"><div class="legend-swatch" style="background:${color(i).bg};"></div><span>${esc(mt.name)}</span></div>`
+    ).join('');
+
+    buildChart(schedule, totalDays, 'teacher-gantt-chart', mains, subs);
+}
+
+function backToTeacherList() {
+    document.getElementById('teacher-gantt-section').style.display = 'none';
+    document.getElementById('teacher-list-section').style.display  = 'block';
+}
+
+// ================================================================
+//  RENDER INPUT
+// ================================================================
+function renderInput() {
+    const c = document.getElementById('main-tasks-container');
+    if (!mainTasks.length) {
+        c.innerHTML = '<div class="empty-input-state">לחץ "הוסף משימה מרכזית" כדי להתחיל</div>';
+        return;
+    }
+    c.innerHTML = mainTasks.map((mt, i) => renderMainCard(mt, i)).join('');
+}
+
+function renderMainCard(mt, idx) {
+    const col  = color(idx);
+    const subs = subTasks.filter(s => s.mainTaskId === mt.id);
+    return `
+    <div class="main-task-card">
+      <div class="main-task-header" style="background:${col.bg};">
+        <span class="task-num">${idx + 1}</span>
+        <input class="main-task-name-input" type="text"
+               value="${esc(mt.name)}" placeholder="שם המשימה המרכזית"
+               oninput="updateMain(${mt.id},'name',this.value)">
+        <button class="btn btn-delete btn-sm"
+                style="background:rgba(0,0,0,0.2);color:white;border-color:rgba(255,255,255,0.3);"
+                onclick="removeMain(${mt.id})">✕</button>
+      </div>
+      <div class="main-task-body">
+        ${subs.map(s => renderSubRow(s, col)).join('')}
+        <div class="add-sub-row">
+          <button class="btn btn-secondary btn-sm" onclick="addSub(${mt.id})">＋ הוסף משימת משנה</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function renderSubRow(sub, col) {
+    const others  = subTasks.filter(s => s.id !== sub.id);
+    const depOpts = others.map(s => {
+        const parent = mainTasks.find(m => m.id === s.mainTaskId);
+        const label  = (parent ? parent.name : '?') + ' › ' + s.name;
+        return `<option value="${s.id}" ${sub.dependsOn === s.id ? 'selected' : ''}>${esc(label)}</option>`;
+    }).join('');
+    return `
+    <div class="subtask-row">
+      <div class="color-dot" style="background:${col.bg};"></div>
+      <input class="sub-name-input" type="text"
+             value="${esc(sub.name)}" placeholder="שם משימת המשנה"
+             oninput="updateSub(${sub.id},'name',this.value)">
+      <div class="field-group">
+        <span class="field-label">משך:</span>
+        <input class="duration-input" type="number" min="1" max="999"
+               value="${sub.duration}" oninput="updateSub(${sub.id},'duration',this.value)">
+        <span class="field-label">ימים</span>
+      </div>
+      <div class="field-group">
+        <span class="field-label">תלויה ב:</span>
+        <select class="dep-select" onchange="updateSub(${sub.id},'dependsOn',this.value)">
+          <option value="none" ${!sub.dependsOn ? 'selected' : ''}>— אין תלות —</option>
+          ${depOpts}
+        </select>
+      </div>
+      <label class="milestone-toggle field-group">
+        <input type="checkbox" ${sub.isMilestone ? 'checked' : ''}
+               onchange="updateSub(${sub.id},'isMilestone',this.checked)">
+        <span>⬦ אבן דרך</span>
+      </label>
+      <button class="btn btn-delete btn-sm" onclick="removeSub(${sub.id})">✕</button>
+    </div>`;
+}
+
+// ================================================================
+//  DATA MUTATIONS
+// ================================================================
+function debouncedRefresh() {
+    clearTimeout(refreshTimer);
+    refreshTimer = setTimeout(refreshGantt, 280);
+}
+
+function updateProjectName(val) {
+    projectName = val;
+    markDirty();
+    debouncedRefresh();
+}
+
+function addMainTask() {
+    mainTasks.push({ id: nextMid++, name: 'משימה מרכזית ' + nextMid });
+    renderInput(); refreshGantt(); markDirty();
+}
+
+function updateMain(id, field, val) {
+    const mt = mainTasks.find(m => m.id === id);
+    if (mt) mt[field] = val;
+    markDirty(); debouncedRefresh();
+}
+
+function removeMain(id) {
+    const removed = subTasks.filter(s => s.mainTaskId === id).map(s => s.id);
+    mainTasks = mainTasks.filter(m => m.id !== id);
+    subTasks  = subTasks.filter(s => s.mainTaskId !== id);
+    subTasks.forEach(s => { if (removed.includes(s.dependsOn)) s.dependsOn = null; });
+    renderInput(); refreshGantt(); markDirty();
+}
+
+function addSub(mainTaskId) {
+    const n = subTasks.filter(s => s.mainTaskId === mainTaskId).length + 1;
+    subTasks.push({ id: nextSid++, mainTaskId, name: 'משימה ' + n, duration: 3, dependsOn: null, isMilestone: false });
+    renderInput(); refreshGantt(); markDirty();
+}
+
+function updateSub(id, field, val) {
+    const sub = subTasks.find(s => s.id === id);
+    if (!sub) return;
+    if (field === 'duration')         sub.duration    = Math.max(1, parseInt(val) || 1);
+    else if (field === 'dependsOn')   sub.dependsOn   = val === 'none' ? null : parseInt(val);
+    else if (field === 'isMilestone') sub.isMilestone = val;
+    else                              sub[field]      = val;
+    markDirty();
+    if (field === 'dependsOn' || field === 'isMilestone') refreshGantt();
+    else debouncedRefresh();
+}
+
+function removeSub(id) {
+    subTasks = subTasks.filter(s => s.id !== id);
+    subTasks.forEach(s => { if (s.dependsOn === id) s.dependsOn = null; });
+    renderInput(); refreshGantt(); markDirty();
+}
+
+// ================================================================
+//  SCHEDULE CALCULATION  (useSubs = optional override)
+// ================================================================
+function calcSchedule(useSubs) {
+    useSubs = useSubs || subTasks;
+    const result   = {};
+    const visiting = new Set();
+    const visited  = new Set();
+    let hasCycle   = false;
+
+    function resolve(sid) {
+        if (visited.has(sid))  return result[sid].startDay;
+        if (visiting.has(sid)) { hasCycle = true; return 1; }
+        visiting.add(sid);
+        const sub = useSubs.find(s => s.id === sid);
+        if (!sub) { visiting.delete(sid); return 1; }
+        let startDay = 1;
+        if (sub.dependsOn != null) {
+            const dep = useSubs.find(s => s.id === sub.dependsOn);
+            if (dep) {
+                resolve(sub.dependsOn);
+                const di = result[sub.dependsOn];
+                startDay = (di ? di.endDay : dep.duration) + 1;
+            }
+        }
+        result[sid] = { startDay, endDay: startDay + (sub.duration || 1) - 1 };
+        visiting.delete(sid);
+        visited.add(sid);
+        return startDay;
+    }
+    useSubs.forEach(s => { if (!visited.has(s.id)) resolve(s.id); });
+    return { schedule: result, hasCycle };
+}
+
+// ================================================================
+//  REFRESH GANTT  (student view)
+// ================================================================
+function refreshGantt() {
+    const hasData = mainTasks.length > 0 && subTasks.length > 0;
+    document.getElementById('gantt-empty').style.display   = hasData ? 'none'  : 'block';
+    document.getElementById('gantt-content').style.display = hasData ? 'block' : 'none';
+    if (!hasData) return;
+
+    const { schedule, hasCycle } = calcSchedule();
+    const errEl = document.getElementById('error-banner');
+    errEl.style.display = hasCycle ? 'block' : 'none';
+    errEl.textContent   = '⚠️ נמצאה תלות מעגלית — בדוק את הגדרות התלויות.';
+    const totalDays = Math.max(...Object.values(schedule).map(s => s.endDay), 1);
+
+    const nameEl = document.getElementById('banner-project-name');
+    if (projectName.trim()) { nameEl.textContent = projectName.trim(); nameEl.className = 'banner-project-name'; }
+    else { nameEl.textContent = 'שם הפרויקט'; nameEl.className = 'banner-project-name placeholder'; }
+
+    document.getElementById('total-days').textContent = totalDays;
+    document.getElementById('meta-text').textContent  = `${subTasks.length} משימות משנה | ${mainTasks.length} משימות מרכזיות`;
+
+    document.getElementById('legend').innerHTML = mainTasks.map((mt, i) =>
+        `<div class="legend-item"><div class="legend-swatch" style="background:${color(i).bg};"></div><span>${esc(mt.name)}</span></div>`
+    ).join('');
+
+    buildChart(schedule, totalDays, 'gantt-chart', mainTasks, subTasks);
+}
+
+// ================================================================
+//  BUILD CHART TABLE
+// ================================================================
+function buildChart(schedule, totalDays, containerId, useMains, useSubs) {
+    useMains = useMains || mainTasks;
+    useSubs  = useSubs  || subTasks;
+
+    const cw = totalDays <= 20 ? 46 : totalDays <= 40 ? 32 : totalDays <= 70 ? 22 : totalDays <= 120 ? 16 : 12;
+    const every = totalDays <= 30 ? 1 : totalDays <= 60 ? 5 : totalDays <= 120 ? 10 : 20;
+
+    let hdr = `<th class="name-header">משימה</th>`;
+    for (let d = 1; d <= totalDays; d++) {
+        const label = (d === 1 || d === totalDays || d % every === 0) ? d : '';
+        const bg    = d % 2 === 0 ? 'background:#e9ecef;' : '';
+        hdr += `<th style="width:${cw}px;${bg}">${label}</th>`;
+    }
+
+    let body = '';
+    useMains.forEach((mt, mtIdx) => {
+        const col  = color(mtIdx);
+        const subs = useSubs.filter(s => s.mainTaskId === mt.id);
+        if (!subs.length) return;
+
+        body += `<tr class="group-row">
+          <td class="name-cell group-header" style="background:${col.light};color:${col.bg};border-right:4px solid ${col.bg};">${esc(mt.name)}</td>
+          <td colspan="${totalDays}" style="background:${col.light};"></td>
+        </tr>`;
+
+        subs.forEach(sub => {
+            const sched  = schedule[sub.id] || { startDay: 1, endDay: sub.duration || 1 };
+            const start  = Math.max(1, sched.startDay);
+            const end    = Math.min(totalDays, sched.endDay);
+
+            const depName = sub.dependsOn != null ? subName(sub.dependsOn, useSubs) : null;
+            const depTag  = depName ? `<span style="color:#bbb;font-size:0.7rem;margin-right:4px;" title="תלוי ב: ${esc(depName)}">↳</span>` : '';
+
+            let cells = '';
+
+            if (sub.isMilestone) {
+                const before = start - 1;
+                const after  = totalDays - start;
+                const fill   = lightenColor(col.bg, 0.55);
+                if (before > 0) cells += `<td colspan="${before}"></td>`;
+                cells += `<td class="gantt-milestone-cell" title="${esc(sub.name)}: יום ${start}">
+                            <div class="gantt-milestone-wrap">
+                              <div class="gantt-diamond" data-sub-id="${sub.id}" style="border-color:${col.bg};background:${fill};"></div>
+                            </div>
+                          </td>`;
+                if (after > 0) cells += `<td colspan="${after}"></td>`;
+
+                body += `<tr>
+                  <td class="name-cell" style="border-right:3px solid ${col.bg};">
+                    <span style="color:${col.bg};margin-left:5px;font-size:0.85rem;">◆</span>
+                    ${depTag}${esc(sub.name)}
+                    <span style="color:#bbb;font-size:0.73rem;"> יום ${start}</span>
+                  </td>
+                  ${cells}
+                </tr>`;
+            } else {
+                const span   = Math.max(1, end - start + 1);
+                const before = start - 1;
+                const after  = totalDays - end;
+                if (before > 0) cells += `<td colspan="${before}"></td>`;
+                cells += `<td colspan="${span}" title="${esc(sub.name)}: ימים ${start}–${end} (${sub.duration} ימים)">
+                            <div class="gantt-bar" data-sub-id="${sub.id}" style="background:${col.bg};">${esc(sub.name)}</div>
+                          </td>`;
+                if (after  > 0) cells += `<td colspan="${after}"></td>`;
+
+                body += `<tr>
+                  <td class="name-cell" style="border-right:3px solid ${col.bg};">
+                    <span style="color:${col.bg};margin-left:5px;font-size:0.8rem;">▸</span>
+                    ${depTag}${esc(sub.name)}
+                    <span style="color:#bbb;font-size:0.73rem;"> ${sub.duration}ד'</span>
+                  </td>
+                  ${cells}
+                </tr>`;
+            }
+        });
+    });
+
+    document.getElementById(containerId).innerHTML =
+        `<table class="gantt-table"><thead><tr>${hdr}</tr></thead><tbody>${body}</tbody></table>`;
+
+    // capture for async RAF
+    const capturedMains = useMains;
+    const capturedSubs  = useSubs;
+    requestAnimationFrame(() => drawDependencyLines(containerId, capturedMains, capturedSubs));
+}
+
+// ================================================================
+//  DEPENDENCY LINES (SVG overlay)
+// ================================================================
+function drawDependencyLines(containerId, useMains, useSubs) {
+    useMains = useMains || mainTasks;
+    useSubs  = useSubs  || subTasks;
+
+    const chart = document.getElementById(containerId);
+    chart.querySelectorAll('.dep-svg').forEach(s => s.remove());
+
+    const deps = useSubs.filter(s => s.dependsOn != null);
+    if (!deps.length) return;
+
+    const table = chart.querySelector('.gantt-table');
+    if (!table) return;
+
+    const ns  = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.classList.add('dep-svg');
+    svg.setAttribute('width',  table.offsetWidth);
+    svg.setAttribute('height', table.offsetHeight);
+    svg.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;z-index:4;overflow:visible;';
+
+    // Arrow markers
+    const defs          = document.createElementNS(ns, 'defs');
+    const colorToMarker = new Map();
+    deps.forEach(sub => {
+        const mtIdx = useMains.findIndex(m => m.id === sub.mainTaskId);
+        const col   = color(Math.max(0, mtIdx)).bg;
+        if (colorToMarker.has(col)) return;
+        const id = 'arr' + containerId.replace(/[^a-z]/gi,'') + colorToMarker.size;
+        colorToMarker.set(col, id);
+        const marker = document.createElementNS(ns, 'marker');
+        marker.setAttribute('id', id); marker.setAttribute('markerWidth','8'); marker.setAttribute('markerHeight','8');
+        marker.setAttribute('refX','7'); marker.setAttribute('refY','4'); marker.setAttribute('orient','auto');
+        const arrow = document.createElementNS(ns, 'path');
+        arrow.setAttribute('d','M0,1 L7,4 L0,7 Z'); arrow.setAttribute('fill', col);
+        marker.appendChild(arrow); defs.appendChild(marker);
+    });
+    svg.appendChild(defs);
+
+    const chartRect = chart.getBoundingClientRect();
+    function relPos(el) {
+        const r = el.getBoundingClientRect();
+        return { left: r.left - chartRect.left, right: r.right - chartRect.left, centerY: (r.top + r.bottom) / 2 - chartRect.top };
+    }
+
+    deps.forEach(sub => {
+        const predEl = chart.querySelector(`[data-sub-id="${sub.dependsOn}"]`);
+        const succEl = chart.querySelector(`[data-sub-id="${sub.id}"]`);
+        if (!predEl || !succEl) return;
+
+        const pred = relPos(predEl);
+        const succ = relPos(succEl);
+        const x1 = pred.right, y1 = pred.centerY, x2 = succ.left, y2 = succ.centerY;
+
+        const mtIdx    = useMains.findIndex(m => m.id === sub.mainTaskId);
+        const col      = color(Math.max(0, mtIdx)).bg;
+        const markerId = colorToMarker.get(col);
+
+        const step = 10;
+        const d = x2 > x1 + step * 2
+            ? `M${x1},${y1} H${x1 + step} V${y2} H${x2}`
+            : `M${x1},${y1} H${x1 + step} V${Math.max(y1,y2)+26} H${x2-step} V${y2} H${x2}`;
+
+        const path = document.createElementNS(ns, 'path');
+        path.setAttribute('d', d); path.setAttribute('fill', 'none'); path.setAttribute('stroke', col);
+        path.setAttribute('stroke-width', '1.8'); path.setAttribute('opacity', '0.8');
+        path.setAttribute('marker-end', `url(#${markerId})`);
+        svg.appendChild(path);
+    });
+
+    chart.appendChild(svg);
+}
+
+// ================================================================
+//  INIT
+// ================================================================
+const isTeacher = window.location.hash === '#teacher' ||
+                  new URLSearchParams(window.location.search).has('teacher');
+
+if (isTeacher) {
+    initTeacherView();
+} else {
+    document.getElementById('login-screen').style.display = 'flex';
+}
+</script>
+</body>
+</html>
