@@ -1,0 +1,877 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>תרגיל בניית גאנט – בונה גאנט</title>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;900&family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4f2ee;
+    --white: #ffffff;
+    --ink: #1a1a2e;
+    --muted: #7a7a8c;
+    --border: #dddbd6;
+    --red: #e05a4e;
+    --blue: #3b82c4;
+    --green: #4aaa72;
+    --yellow: #f5c842;
+    --red-light: #fdf0ef;
+    --blue-light: #eff5fc;
+    --green-light: #edf8f2;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Heebo', sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  /* Subtle dot grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: radial-gradient(circle, #c8c4bc 1px, transparent 1px);
+    background-size: 28px 28px;
+    opacity: 0.4;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .page {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    background: var(--ink);
+    color: white;
+    border-radius: 16px;
+    padding: 40px 40px 36px;
+    margin-bottom: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .header::after {
+    content: '';
+    position: absolute;
+    top: -40px; left: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(240,192,64,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .header-top {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+  }
+
+  .tool-badge {
+    background: rgba(255,255,255,0.1);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 8px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--yellow);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header h1 {
+    font-size: clamp(28px, 4vw, 42px);
+    font-weight: 900;
+    line-height: 1.15;
+    color: white;
+    margin-bottom: 10px;
+  }
+
+  .header h1 em {
+    font-style: normal;
+    color: var(--yellow);
+  }
+
+  .header .desc {
+    font-size: 16px;
+    color: rgba(255,255,255,0.6);
+    font-weight: 300;
+    max-width: 560px;
+  }
+
+  .meta-pills {
+    display: flex;
+    gap: 12px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+
+  .pill {
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 100px;
+    padding: 5px 16px;
+    font-size: 13px;
+    color: rgba(255,255,255,0.75);
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--white);
+    border-radius: 14px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--border);
+  }
+
+  .card-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .step-circle {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: white;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .step-circle.red { background: var(--red); }
+  .step-circle.blue { background: var(--blue); }
+  .step-circle.green { background: var(--green); }
+
+  .card-title h2 {
+    font-size: 19px;
+    font-weight: 700;
+    color: var(--ink);
+  }
+
+  .card-title .sub {
+    font-size: 13px;
+    font-weight: 400;
+    color: var(--muted);
+    margin-right: 8px;
+  }
+
+  /* ── CONCEPT GRID ── */
+  .concepts {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 14px;
+    margin-bottom: 4px;
+  }
+
+  .concept {
+    border-radius: 12px;
+    padding: 20px;
+    border: 1.5px solid transparent;
+  }
+
+  .concept.c-red { background: var(--red-light); border-color: #f4c5c1; }
+  .concept.c-blue { background: var(--blue-light); border-color: #c5daf4; }
+  .concept.c-green { background: var(--green-light); border-color: #b8e8cc; }
+
+  .concept-icon { font-size: 26px; margin-bottom: 10px; display: block; }
+
+  .concept h3 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+
+  .c-red h3 { color: var(--red); }
+  .c-blue h3 { color: var(--blue); }
+  .c-green h3 { color: var(--green); }
+
+  .concept p { font-size: 13.5px; color: #555; line-height: 1.55; }
+
+  .concept .eg {
+    margin-top: 10px;
+    padding: 8px 10px;
+    background: rgba(255,255,255,0.7);
+    border-radius: 7px;
+    font-size: 12.5px;
+    color: #666;
+    line-height: 1.5;
+  }
+
+  /* ── UI WALKTHROUGH ── */
+  .ui-block {
+    margin-bottom: 24px;
+  }
+
+  .ui-block h3 {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .ui-block h3 .num {
+    width: 22px; height: 22px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: white;
+    font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  /* Simulated UI elements */
+  .sim-header {
+    background: var(--ink);
+    border-radius: 10px 10px 0 0;
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .sim-header span {
+    font-size: 15px;
+    font-weight: 700;
+    color: white;
+  }
+
+  .sim-body {
+    background: #f9f8f6;
+    border: 1px solid var(--border);
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    padding: 16px 20px;
+    font-size: 13.5px;
+    color: #555;
+  }
+
+  /* Colored section headers matching real tool */
+  .sim-section {
+    border-radius: 8px;
+    padding: 10px 16px;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 700;
+    font-size: 14px;
+    color: white;
+  }
+
+  .sim-section.red { background: var(--red); }
+  .sim-section.blue { background: var(--blue); }
+  .sim-section.green { background: var(--green); }
+
+  .sim-section .num-badge {
+    background: rgba(255,255,255,0.25);
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* Task row mockup */
+  .sim-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+  }
+
+  .sim-row:last-child { border-bottom: none; }
+
+  .sim-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .sim-dot.red { background: var(--red); }
+  .sim-dot.blue { background: var(--blue); }
+  .sim-dot.green { background: var(--green); }
+
+  .sim-task-name { flex: 1; font-weight: 500; color: var(--ink); }
+
+  .sim-field {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 8px;
+    font-size: 12px;
+    color: var(--muted);
+    white-space: nowrap;
+  }
+
+  .sim-field.highlight {
+    border-color: var(--red);
+    color: var(--red);
+    font-weight: 600;
+  }
+
+  .sim-field.blue-hl {
+    border-color: var(--blue);
+    color: var(--blue);
+    font-weight: 600;
+  }
+
+  .sim-milestone {
+    width: 16px; height: 16px;
+    background: var(--yellow);
+    border-radius: 3px;
+    transform: rotate(45deg);
+    flex-shrink: 0;
+  }
+
+  /* Callout */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 14px;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-top: 12px;
+  }
+
+  .callout.info { background: var(--blue-light); border: 1px solid #c5daf4; color: #2a5a8c; }
+  .callout.warn { background: #fff8ec; border: 1px solid #f5d88a; color: #7a5a00; }
+  .callout.tip  { background: var(--green-light); border: 1px solid #b8e8cc; color: #1a6640; }
+
+  .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+
+  /* ── SCENARIO ── */
+  .scenario-box {
+    background: linear-gradient(135deg, #1a1a2e 0%, #2d2d4e 100%);
+    border-radius: 14px;
+    padding: 32px;
+    color: white;
+    margin-bottom: 20px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .scenario-box::before {
+    content: 'SCENARIO';
+    position: absolute;
+    top: 16px; left: 24px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: rgba(255,255,255,0.2);
+  }
+
+  .scenario-box h3 {
+    font-size: 21px;
+    font-weight: 800;
+    margin-bottom: 10px;
+    margin-top: 8px;
+    color: var(--yellow);
+  }
+
+  .scenario-box .scenario-desc {
+    font-size: 14.5px;
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .scenario-note {
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13.5px;
+    color: rgba(255,255,255,0.6);
+    line-height: 1.6;
+  }
+
+  .scenario-note strong { color: var(--yellow); }
+
+  /* ── REQUIREMENTS ── */
+  .req-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .req-item {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: #fafaf8;
+    border: 1.5px solid var(--border);
+  }
+
+  .req-item.bonus {
+    background: #fffbec;
+    border-color: #f5d88a;
+  }
+
+  .req-check {
+    width: 20px; height: 20px;
+    border: 2px solid var(--border);
+    border-radius: 4px;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+
+  .req-item.bonus .req-check { border-color: #f5c842; }
+
+  .req-item p { font-size: 14.5px; color: #444; line-height: 1.5; }
+  .req-item p strong { color: var(--ink); }
+  .req-item .bonus-tag {
+    display: inline-block;
+    background: var(--yellow);
+    color: var(--ink);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 8px;
+    border-radius: 4px;
+    margin-right: 6px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* ── SUBMISSION ── */
+  .submit-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .submit-step {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding: 14px 18px;
+    background: #fafaf8;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .submit-num {
+    width: 30px; height: 30px;
+    background: var(--ink);
+    color: white;
+    border-radius: 8px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .submit-step p { font-size: 14.5px; color: #444; }
+  .submit-step p strong { color: var(--ink); }
+  .submit-step code {
+    background: #eee;
+    border-radius: 4px;
+    padding: 1px 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    color: var(--ink);
+  }
+
+  .email-template {
+    background: #fafaf8;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 8px;
+  }
+
+  .email-header {
+    background: var(--ink);
+    padding: 12px 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .email-header span {
+    font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+    color: rgba(255,255,255,0.5);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .email-body {
+    padding: 18px 20px;
+    font-size: 13.5px;
+    line-height: 1.9;
+    color: #444;
+  }
+
+  .ph {
+    background: rgba(245,200,66,0.2);
+    border: 1px solid #f5c842;
+    border-radius: 4px;
+    padding: 0 6px;
+    color: #8a6e00;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+  }
+
+  /* ── TOOL LINK HIGHLIGHT ── */
+  .tool-link-box {
+    background: linear-gradient(135deg, var(--red) 0%, #c0392b 100%);
+    border-radius: 12px;
+    padding: 22px 28px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+
+  .tool-link-box .tl-text h3 {
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    margin-bottom: 4px;
+  }
+
+  .tool-link-box .tl-text p {
+    font-size: 13px;
+    color: rgba(255,255,255,0.65);
+  }
+
+  .tool-link-btn {
+    background: white;
+    color: var(--red);
+    font-weight: 700;
+    font-size: 14px;
+    padding: 10px 22px;
+    border-radius: 8px;
+    text-decoration: none;
+    display: inline-block;
+    white-space: nowrap;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+  }
+
+  .footer p { font-size: 13px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 28px 0;
+    position: relative;
+  }
+
+  hr.soft { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(14px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .page > * { animation: fadeUp 0.45s ease both; }
+  .page > *:nth-child(1) { animation-delay: 0.05s; }
+  .page > *:nth-child(2) { animation-delay: 0.10s; }
+  .page > *:nth-child(3) { animation-delay: 0.15s; }
+  .page > *:nth-child(4) { animation-delay: 0.20s; }
+  .page > *:nth-child(5) { animation-delay: 0.25s; }
+  .page > *:nth-child(6) { animation-delay: 0.30s; }
+  .page > *:nth-child(7) { animation-delay: 0.35s; }
+  .page > *:nth-child(8) { animation-delay: 0.40s; }
+
+  @media (max-width: 600px) {
+    .card { padding: 20px 18px; }
+    .header { padding: 28px 22px 24px; }
+    .scenario-box { padding: 22px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-top">
+      <div class="tool-badge">📊 בונה גאנט</div>
+    </div>
+    <h1>תרגיל מעשי:<br><em>בניית תרשים גאנט</em></h1>
+    <p class="desc">תכנון פרויקט אמיתי עם משימות ראשיות, משימות משנה, פרקי זמן ותלויות</p>
+    <div class="meta-pills">
+      <div class="pill">⏱ 45–60 דקות</div>
+      <div class="pill">👤 עבודה אישית</div>
+      <div class="pill">🎯 תרחיש פתוח</div>
+    </div>
+  </div>
+
+  <!-- TOOL LINK -->
+  <div class="tool-link-box">
+    <div class="tl-text">
+      <h3>🔗 קישור לכלי – בונה גאנט</h3>
+      <p>לחצו לפתיחת הכלי בדפדפן – ללא התקנה, ללא הורדה</p>
+    </div>
+    <a class="tool-link-btn" href="https://shulron.github.io/gantt-classroom/" target="_blank">פתח את הכלי ←</a>
+  </div>
+
+  <!-- PART 1: CONCEPTS -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-circle">01</div>
+      <h2>מושגי יסוד <span class="sub">לפני שמתחילים</span></h2>
+    </div>
+
+    <div class="concepts">
+      <div class="concept c-red">
+        <span class="concept-icon">📌</span>
+        <h3>משימה ראשית</h3>
+        <p>קבוצת עבודה גדולה שמחולקת לשלבים. בכלי זו השורה הצבעונית הגדולה (אדום / כחול / ירוק).</p>
+        <div class="eg">דוגמה: <strong>החנות</strong>, <strong>המלאי</strong>, <strong>השיווק</strong></div>
+      </div>
+
+      <div class="concept c-blue">
+        <span class="concept-icon">✅</span>
+        <h3>משימת משנה</h3>
+        <p>פעולה ספציפית תחת המשימה הראשית. כאן מגדירים <strong>משך זמן</strong> ו<strong>תלות</strong>.</p>
+        <div class="eg">דוגמה: "חתימת חוזה שכירות – 3 ימים"</div>
+      </div>
+
+      <div class="concept c-green">
+        <span class="concept-icon">🔗</span>
+        <h3>תלות (תלויה ב)</h3>
+        <p>המשימה לא מתחילה לפני שהמשימה הקודמת סיימה. מגדירים בתפריט "תלויה ב" בכל שורה.</p>
+        <div class="eg">דוגמה: "שיפוץ חנות" תלויה ב"תכנון חנות"</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 2: HOW TO USE THE TOOL -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-circle">02</div>
+      <h2>איך עובדים עם הכלי <span class="sub">שלב אחר שלב</span></h2>
+    </div>
+
+    <!-- Step 1: Project name -->
+    <div class="ui-block">
+      <h3><span class="num">1</span> תנו שם לפרויקט שלכם</h3>
+      <div class="sim-header">
+        <span>שם הפרויקטים</span>
+      </div>
+      <div class="sim-body">
+        הקלידו את שם הפרויקט שבחרתם בשדה בראש הדף. זה מה שיופיע בכותרת הגאנט.
+      </div>
+    </div>
+
+    <!-- Step 2: Main tasks -->
+    <div class="ui-block">
+      <h3><span class="num">2</span> הוסיפו משימה ראשית</h3>
+      <div class="sim-body" style="border-radius: 10px; border: 1px solid var(--border);">
+        <div class="sim-section red">
+          <span>📋 משימה ראשית</span>
+          <span class="num-badge">1</span>
+          <span style="font-size:12px; opacity:0.8; margin-right: auto;">לחצו על "הוסף משימות מרכזיות" בתחתית הדף</span>
+        </div>
+        <p style="font-size:13.5px; color:#555; margin-top:8px;">הקלידו את שם המשימה הראשית בתוך השורה הצבעונית. כל משימה ראשית מקבלת צבע אחר – אדום, כחול, ירוק.</p>
+      </div>
+    </div>
+
+    <!-- Step 3: Sub tasks -->
+    <div class="ui-block">
+      <h3><span class="num">3</span> הוסיפו משימות משנה</h3>
+      <div class="sim-body" style="border-radius: 10px; border: 1px solid var(--border); padding: 0;">
+        <div class="sim-section red" style="border-radius: 8px 8px 0 0; margin: 0;">
+          <span>החנות</span>
+          <span class="num-badge">1</span>
+        </div>
+        <div style="padding: 12px 16px;">
+          <div class="sim-row">
+            <div class="sim-dot red"></div>
+            <div class="sim-task-name">חתימת חוזה שכירות</div>
+            <div class="sim-field highlight">משך: 3 ימים</div>
+            <div class="sim-field">אין תלות</div>
+          </div>
+          <div class="sim-row">
+            <div class="sim-dot red"></div>
+            <div class="sim-task-name">תכנון חנות</div>
+            <div class="sim-field highlight">משך: 14 ימים</div>
+            <div class="sim-field" style="color:#555;">← חתימת חוזה</div>
+          </div>
+          <div class="sim-row">
+            <div class="sim-dot red"></div>
+            <div class="sim-task-name">תכנון מאושר ◆</div>
+            <div class="sim-field highlight">משך: 1 יום</div>
+            <div class="sim-field blue-hl">אבן דרך ✓</div>
+          </div>
+          <div style="padding: 10px 0 2px; font-size: 12.5px; color: var(--muted);">
+            ＋ הוסף משימת משנה
+          </div>
+        </div>
+      </div>
+      <div class="callout info" style="margin-top: 12px;">
+        <div class="callout-icon">💡</div>
+        <div>לכל משימת משנה מגדירים: <strong>שם</strong>, <strong>משך בימים</strong>, ו<strong>תלויה ב</strong> (בחרו מהתפריט הנפתח). אם אין תלות, השאירו "אין תלות".</div>
+      </div>
+    </div>
+
+    <!-- Step 4: Milestone -->
+    <div class="ui-block">
+      <h3><span class="num">4</span> סמנו "אבן דרך" (אופציונלי)</h3>
+      <div class="sim-body" style="border-radius: 10px; border: 1px solid var(--border); display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+        <div class="sim-milestone"></div>
+        <div style="font-size:13.5px; color:#555;">
+          מסמנים את תיבת הסימון <strong>"אבן דרך"</strong> בשורת המשימה. הגאנט יציג אותה כ<strong>מעוין (◆)</strong> במקום פס – סימן לאירוע חשוב ולא פעולה.
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5: See the gantt -->
+    <div class="ui-block" style="margin-bottom: 0;">
+      <h3><span class="num">5</span> צפו בתרשים הגאנט</h3>
+      <div class="sim-body" style="border-radius: 10px; border: 1px solid var(--border);">
+        <p style="font-size:13.5px; color:#555;">הגאנט מתעדכן אוטומטית מתחת לטופס. תוכלו לראות את כל המשימות על ציר הזמן, הצבעים לפי משימה ראשית, וחיצי תלות בין משימות.</p>
+      </div>
+      <div class="callout warn" style="margin-top:10px;">
+        <div class="callout-icon">⚠️</div>
+        <div>אם משימה <strong>תלויה</strong> במשימה אחרת – הפס שלה יתחיל רק לאחר שזו תסתיים. בדקו שזה הגיוני ויזואלית!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 3: SCENARIO -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-circle">03</div>
+      <h2>התרגיל <span class="sub">בנו גאנט לפרויקט שלכם</span></h2>
+    </div>
+
+    <div class="scenario-box">
+      <h3>🎯 בחרו פרויקט ובנו גאנט</h3>
+      <p class="scenario-desc">
+        בחרו פרויקט אמיתי או דמיוני שאתם מכירים. זה יכול להיות פתיחת עסק, ארגון אירוע, בניית מוצר – כל דבר שיש בו שלבים ותכנון.
+      </p>
+      <div class="scenario-note">
+        <strong>הפרויקט חייב לכלול:</strong><br>
+        לפחות 2 משימות ראשיות · לפחות 4 משימות משנה בסך הכל · לפחות 2 תלויות · תאריך התחלה הגיוני
+      </div>
+    </div>
+
+    <div class="callout tip">
+      <div class="callout-icon">💡</div>
+      <div>
+        <strong>רעיונות לפרויקטים:</strong> פתיחת חנות / ארגון כנס / פיתוח אפליקציה / קמפיין שיווקי / עיצוב מחדש של חדר / הכנת סרטון יוטיוב
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 4: REQUIREMENTS -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-circle">04</div>
+      <h2>דרישות התרגיל <span class="sub">מה צריך להיות בגאנט</span></h2>
+    </div>
+
+    <div class="req-list">
+      <div class="req-item">
+        <div class="req-check"></div>
+        <p><strong>שם פרויקט</strong> ברור בראש הגאנט</p>
+      </div>
+      <div class="req-item">
+        <div class="req-check"></div>
+        <p>לפחות <strong>2 משימות ראשיות</strong> בצבעים שונים</p>
+      </div>
+      <div class="req-item">
+        <div class="req-check"></div>
+        <p>לפחות <strong>4 משימות משנה</strong> עם משך זמן מוגדר בכל אחת</p>
+      </div>
+      <div class="req-item">
+        <div class="req-check"></div>
+        <p>לפחות <strong>2 תלויות</strong> – ניתן לראות חיצי קשר בגאנט</p>
+      </div>
+      <div class="req-item bonus">
+        <div class="req-check"></div>
+        <p><span class="bonus-tag">BONUS</span> הוסיפו לפחות <strong>אבן דרך אחת</strong> (מעוין ◆ בגאנט)</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PART 5: SUBMISSION -->
+  <div class="card">
+    <div class="card-title">
+      <div class="step-circle">05</div>
+      <h2>איך מגישים <span class="sub">פשוט מאוד</span></h2>
+    </div>
+
+    <div class="submit-steps">
+      <div class="submit-step">
+        <div class="submit-num">1</div>
+        <p>לחצו על <strong>"פתח את הכלי"</strong> למעלה</p>
+      </div>
+      <div class="submit-step">
+        <div class="submit-num">2</div>
+        <p>הכניסו את <strong>שמכם</strong> ואת <strong>מספר הכיתה</strong> במסך הכניסה</p>
+      </div>
+      <div class="submit-step">
+        <div class="submit-num">3</div>
+        <p>בנו את הגאנט – העבודה שלכם <strong>נשמרת אוטומטית</strong> בזמן שאתם עובדים</p>
+      </div>
+      <div class="submit-step">
+        <div class="submit-num">4</div>
+        <p>סיימתם? <strong>אין צורך לשלוח כלום</strong> – המורה רואה את העבודה שלכם ישירות</p>
+      </div>
+    </div>
+
+    <div class="callout tip" style="margin-top: 16px;">
+      <div class="callout-icon">💡</div>
+      <div>כתבו את שמכם <strong>בעברית מלאה</strong> כפי שהמורה מכיר אתכם, כדי שיוכל לזהות את העבודה שלכם.</div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>תרגיל ניהול פרויקטים // בונה גאנט // בהצלחה! 🎯</p>
+  </footer>
+
+</div>
+</body>
+</html>
